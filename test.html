@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Firebase Auth Token Test</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+</head>
+<body>
+  <h2>Firebase Login Test</h2>
+  <input id="email" placeholder="Email" /><br/>
+  <input id="password" type="password" placeholder="Password" /><br/>
+  <button onclick="login()">Login & Get Token</button>
+
+  <pre id="output"></pre>
+
+  <script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyCwq0zVxQwKl52vniygq8zaHQQPbnEblWA",
+        authDomain: "capstone-e3d93.firebaseapp.com",
+        projectId: "capstone-e3d93",
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    async function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const idToken = await userCredential.user.getIdToken();
+        document.getElementById("output").textContent = "ID Token:\n\n" + idToken;
+        console.log("ID Token:", idToken);
+      } catch (error) {
+        document.getElementById("output").textContent = "Error: " + error.message;
+      }
+    }
+  </script>
+</body>
+</html>
