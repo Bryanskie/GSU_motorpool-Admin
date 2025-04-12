@@ -1,8 +1,15 @@
 // src/pages/AdminDashboard.jsx
 import React, { useEffect, useState } from "react";
-import { getFirestore, collection, getDocs, doc, getDoc } from "firebase/firestore";
-import { app } from "../firebase"; // Your firebase initialization
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+} from "firebase/firestore";
+import { app } from "../firebase";
 import { useAuth } from "../context/AuthContext";
+import Sidebar from "../component/Sidebar";
 
 const db = getFirestore(app);
 
@@ -16,9 +23,10 @@ function AdminDashboard() {
     const fetchAlarmData = async () => {
       try {
         const alarmSnapshot = await getDocs(collection(db, "alarmSounds"));
+
         const alarmPromises = alarmSnapshot.docs.map(async (alarmDoc) => {
-          const alarm = alarmDoc.data();
-          const userId = alarmDoc.id; // assuming the doc id is the userId
+          const userId = alarmDoc.id;
+          const alarmDetails = alarmDoc.data(); // assume contains multiple alarms or timestamps
 
           let userEmail = "-";
           let userName = "-";
@@ -34,11 +42,19 @@ function AdminDashboard() {
             console.error(`Failed to fetch user for alarm ${userId}:`, userErr);
           }
 
+          // Flatten nested alarm entries if needed
+          const alarmsArray = Object.entries(alarmDetails).map(
+            ([timestamp, value]) => ({
+              timestamp,
+              ...value,
+            })
+          );
+
           return {
             userId,
             email: userEmail,
             name: userName,
-            alarmDetails: alarm,
+            alarms: alarmsArray,
           };
         });
 
@@ -55,41 +71,58 @@ function AdminDashboard() {
     fetchAlarmData();
   }, []);
 
-  if (loading) {
-    return <div className="p-4">Loading alarm data...</div>;
-  }
-
-  if (error) {
-    return <div className="p-4 text-red-500">{error}</div>;
-  }
+  if (loading) return <div className="p-4">Loading alarm data...</div>;
+  if (error) return <div className="p-4 text-red-500">{error}</div>;
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
-      <h2 className="text-lg mb-4">Welcome, {user?.email}</h2>
+    <div className="flex h-screen">
+      <Sidebar />
+      <div className="flex-1 p-6 overflow-auto">
+        <h1 className="text-2xl font-bold mb-2">Admin Dashboard</h1>
+        <h2 className="text-md text-gray-600 mb-4">Welcome, {user?.email}</h2>
 
-      <table className="min-w-full bg-white border border-gray-300">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="py-2 px-4 border-b">User ID</th>
-            <th className="py-2 px-4 border-b">Name</th>
-            <th className="py-2 px-4 border-b">Email</th>
-            <th className="py-2 px-4 border-b">Alarm Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          {alarmData.map((item) => (
-            <tr key={item.userId} className="hover:bg-gray-50">
-              <td className="py-2 px-4 border-b">{item.userId}</td>
-              <td className="py-2 px-4 border-b">{item.name}</td>
-              <td className="py-2 px-4 border-b">{item.email}</td>
-              <td className="py-2 px-4 border-b">
-                <pre className="text-xs">{JSON.stringify(item.alarmDetails, null, 2)}</pre>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        {alarmData.length === 0 ? (
+          <p>No alarm data found.</p>
+        ) : (
+          <div className="space-y-6">
+            {alarmData.map((entry) => (
+              <div
+                key={entry.userId}
+                className="bg-white shadow-md p-4 rounded-lg border border-gray-200"
+              >
+                <h3 className="font-semibold text-lg text-gray-800 mb-2">
+                  {entry.name} ({entry.email})
+                </h3>
+                <p className="text-sm text-gray-500 mb-2">
+                  User ID: {entry.userId}
+                </p>
+
+                <table className="w-full table-auto text-sm border">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="border px-4 py-2">Timestamp</th>
+                      <th className="border px-4 py-2">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entry.alarms.map((alarm, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="border px-4 py-2">{alarm.timestamp}</td>
+                        <td className="border px-4 py-2 whitespace-pre-wrap">
+                          {Object.entries(alarm)
+                            .filter(([key]) => key !== "timestamp")
+                            .map(([key, val]) => `${key}: ${val}`)
+                            .join("\n")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
