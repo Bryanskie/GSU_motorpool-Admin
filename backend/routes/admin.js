@@ -39,34 +39,57 @@ router.post("/promote", verifyToken, async (req, res) => {
   res.send("User promoted to admin.");
 });
 
-router.put("/user/:uid", verifyToken, async (req, res) => {
+// router.put("/user/:uid", verifyToken, async (req, res) => {
+//   const { uid } = req.params;
+//   const { email, displayName } = req.body;
+
+//   try {
+//     // Update user in Firebase Authentication
+//     const updatedUser = await auth.updateUser(uid, {
+//       email,
+//       displayName,
+//     });
+
+//     // Update user in Firestore
+//     await db.collection("users").doc(uid).update({
+//       email,
+//       displayName,
+//     });
+
+//     res.json({
+//       message: "User updated successfully",
+//       user: updatedUser,
+//     });
+//   } catch (err) {
+//     console.error("Error updating user:", err);
+//     res.status(400).send("Error updating user");
+//   }
+// });
+
+// Update a user's auth profile
+router.put("/user/:uid", async (req, res) => {
   const { uid } = req.params;
-  const { email, displayName } = req.body;
+  const { displayName, email } = req.body;
 
   try {
-    // Update user in Firebase Authentication
-    const updatedUser = await auth.updateUser(uid, {
-      email,
+    const updatedUser = await admin.auth().updateUser(uid, {
       displayName,
+      email,
     });
 
-    // Update user in Firestore
-    await db.collection("users").doc(uid).update({
-      email,
-      displayName,
-    });
-
-    res.json({
-      message: "User updated successfully",
-      user: updatedUser,
-    });
-  } catch (err) {
-    console.error("Error updating user:", err);
-    res.status(400).send("Error updating user");
+    res
+      .status(200)
+      .json({ message: "User updated successfully", user: updatedUser });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to update user", error: error.message });
   }
 });
 
-// Delete user
+module.exports = router;
+
 // Delete user
 router.delete("/user/:userId", async (req, res) => {
   const { userId } = req.params;

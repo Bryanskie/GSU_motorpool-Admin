@@ -30,7 +30,6 @@ function Users() {
   };
 
   const handleUpdate = (user) => {
-    console.log("Update clicked for:", user);
     setSelectedUser(user);
   };
 
@@ -61,21 +60,11 @@ function Users() {
           throw new Error("Failed to delete user");
         }
 
-        Swal.fire({
-          title: "Deleted!",
-          text: "User has been deleted.",
-          icon: "success",
-        });
-
-        // Refresh the user list
+        Swal.fire("Deleted!", "User has been deleted.", "success");
         fetchAuthUsers();
       } catch (error) {
         console.error("Error:", error);
-        Swal.fire({
-          title: "Error!",
-          text: "Failed to delete user: " + error.message,
-          icon: "error",
-        });
+        Swal.fire("Error!", "Failed to delete user: " + error.message, "error");
       }
     }
   };
@@ -162,26 +151,106 @@ function Users() {
         </div>
 
         {selectedUser && (
-          <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center z-50 pointer-events-none">
-            <div className="bg-white rounded-lg p-6 max-w-2xl w-full shadow-2xl border border-gray-300 relative pointer-events-auto">
+          <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center z-50 bg-black bg-opacity-30">
+            <div className="bg-white rounded-lg p-6 w-[30rem] shadow-2xl border border-gray-300 relative pointer-events-auto">
               <button
                 onClick={() => setSelectedUser(null)}
                 className="absolute top-3 right-3 text-gray-500 hover:text-red-500 transition"
               >
                 <X />
               </button>
-              <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                Alarm History for {selectedUser.email}
+
+              <h2 className="text-xl font-semibold mb-6 text-gray-800">
+                Update User Details
               </h2>
-              {alarmData.length > 0 ? (
-                <pre className="bg-gray-100 p-4 rounded text-sm max-h-72 overflow-y-auto">
-                  {JSON.stringify(alarmData, null, 2)}
-                </pre>
-              ) : (
-                <p className="text-gray-500">
-                  No alarm data found for this user.
-                </p>
-              )}
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+
+                  try {
+                    const res = await fetch(
+                      `http://localhost:5000/api/admin/user/${selectedUser.uid}`,
+                      {
+                        method: "PUT",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${localStorage.getItem(
+                            "token"
+                          )}`,
+                        },
+                        body: JSON.stringify({
+                          displayName: selectedUser.displayName,
+                          email: selectedUser.email,
+                        }),
+                      }
+                    );
+
+                    if (!res.ok) {
+                      throw new Error("Failed to update user");
+                    }
+
+                    Swal.fire(
+                      "Success!",
+                      "User updated successfully",
+                      "success"
+                    );
+                    setSelectedUser(null);
+                    fetchAuthUsers(); // Refresh list
+                  } catch (error) {
+                    console.error("Update error:", error);
+                    Swal.fire("Error", "Could not update user.", "error");
+                  }
+                }}
+              >
+                <div className="mb-4">
+                  <label className="block text-gray-600 mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    value={selectedUser.displayName || ""}
+                    onChange={(e) =>
+                      setSelectedUser({
+                        ...selectedUser,
+                        displayName: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    required
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-600 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={selectedUser.email || ""}
+                    onChange={(e) =>
+                      setSelectedUser({
+                        ...selectedUser,
+                        email: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedUser(null)}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
