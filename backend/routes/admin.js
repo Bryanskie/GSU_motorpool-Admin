@@ -1,8 +1,16 @@
 const express = require("express");
+const admin = require("firebase-admin"); // Import Firebase Admin SDK
 const { auth, db } = require("../firebase-admin");
-const { verifyToken, checkAdmin } = require("../middleware/auth");
+const { verifyToken } = require("../middleware/auth");
 
 const router = express.Router();
+
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(), // Or use a path to your service account file
+  });
+}
 
 router.get("/auth-users", async (req, res) => {
   try {
@@ -25,13 +33,13 @@ router.get("/auth-users", async (req, res) => {
 });
 
 // Promote to Admin
-router.post("/promote", verifyToken, checkAdmin, async (req, res) => {
+router.post("/promote", verifyToken, async (req, res) => {
   const { uid } = req.body;
   await db.collection("users").doc(uid).update({ role: "admin" });
   res.send("User promoted to admin.");
 });
 
-router.put("/user/:uid", verifyToken, checkAdmin, async (req, res) => {
+router.put("/user/:uid", verifyToken, async (req, res) => {
   const { uid } = req.params;
   const { email, displayName } = req.body;
 
@@ -59,20 +67,20 @@ router.put("/user/:uid", verifyToken, checkAdmin, async (req, res) => {
 });
 
 // Delete user
-router.delete("/user/:uid", verifyToken, checkAdmin, async (req, res) => {
-  const { uid } = req.params;
+// Delete user
+router.delete("/user/:userId", async (req, res) => {
+  const { userId } = req.params;
 
   try {
-    // Delete the user from Firebase Authentication
-    await auth.deleteUser(uid);
+    console.log("Deleting user with ID:", userId); // Check if ID is correctly passed
 
-    // Delete the user document from Firestore
-    await db.collection("users").doc(uid).delete();
+    // Attempt to delete the user using Firebase Admin SDK
+    await admin.auth().deleteUser(userId); // Now 'admin' is defined and working correctly
 
-    res.send("User deleted.");
-  } catch (err) {
-    console.error("Error deleting user:", err);
-    res.status(400).send("Error deleting user");
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user:", error); // Log the error for debugging
+    res.status(500).json({ message: "Error deleting user" });
   }
 });
 

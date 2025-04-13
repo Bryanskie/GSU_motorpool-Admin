@@ -12,7 +12,20 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // Sign in the user
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      // Get Firebase ID Token
+      const token = await userCredential.user.getIdToken();
+
+      // Store token in localStorage (to be used in authenticated requests later)
+      localStorage.setItem("token", token);
+
+      // Redirect to dashboard
       navigate("/dashboard");
     } catch (err) {
       alert(err.message);

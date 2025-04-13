@@ -3,6 +3,7 @@ import { getFirestore, collection, getDocs } from "firebase/firestore";
 import { app } from "../firebase";
 import { X, Pencil, Trash2 } from "lucide-react";
 import Sidebar from "../component/Sidebar";
+import Swal from "sweetalert2";
 
 const db = getFirestore(app);
 
@@ -33,31 +34,49 @@ function Users() {
     setSelectedUser(user);
   };
 
-  const handleDelete = async (user) => {
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete ${user.email}?`
-    );
-    if (!confirmDelete) return;
+  const handleDelete = async (userId) => {
+    const confirm = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+    });
 
-    try {
-      const response = await fetch(
-        `http://localhost:5000/api/admin/delete-user/${user.uid}`,
-        {
-          method: "DELETE",
+    if (confirm.isConfirmed) {
+      try {
+        const response = await fetch(
+          `http://localhost:5000/api/admin/user/${userId}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to delete user");
         }
-      );
 
-      if (response.ok) {
-        alert("User deleted successfully!");
+        Swal.fire({
+          title: "Deleted!",
+          text: "User has been deleted.",
+          icon: "success",
+        });
+
+        // Refresh the user list
         fetchAuthUsers();
-      } else {
-        const errorText = await response.text();
-        console.error("Failed to delete user:", errorText);
-        alert("Failed to delete user.");
+      } catch (error) {
+        console.error("Error:", error);
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to delete user: " + error.message,
+          icon: "error",
+        });
       }
-    } catch (err) {
-      console.error("Delete error:", err);
-      alert("An error occurred while deleting the user.");
     }
   };
 
@@ -121,7 +140,7 @@ function Users() {
                           Update
                         </button>
                         <button
-                          onClick={() => handleDelete(u)}
+                          onClick={() => handleDelete(u.uid)}
                           className="inline-flex items-center gap-1 bg-red-600 text-white py-1 px-3 rounded hover:bg-red-700 transition"
                         >
                           <Trash2 className="w-4 h-4" />
