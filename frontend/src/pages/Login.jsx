@@ -34,11 +34,7 @@ const Login = () => {
 
   return (
     <main className="relative flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white overflow-hidden px-4">
-      <div className="absolute inset-0 flex justify-end items-center pr-10 pointer-events-none">
-        <div className="text-[400px] font-bold text-yellow-400 opacity-10 select-none animate-pulse">
-          ⚠️
-        </div>
-      </div>
+      <div className="absolute inset-0 flex justify-end items-center pr-10 pointer-events-none"></div>
 
       <form
         onSubmit={handleLogin}
@@ -76,7 +72,7 @@ const Login = () => {
           <input
             id="password"
             type="password"
-            placeholder="••••••••"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-2 border border-gray-600 bg-gray-800 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"

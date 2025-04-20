@@ -19,7 +19,7 @@ const LandingPage = () => {
           <div className="flex items-center space-x-4">
             <img src={logo} alt="Logo" className="h-12 animate-fade-in" />
             <span className="text-xl font-bold text-white tracking-wide">
-              GSU Motopol
+              GSU Motorpool
             </span>
           </div>
           <Link

@@ -1,20 +1,21 @@
-// middlewares/auth.js
-const { auth, db } = require("../firebase-admin");
+// middleware/auth.js
+import admin from "firebase-admin";
 
-const verifyToken = async (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).send("Access Denied");
+export const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
 
-  console.log("Received Token:", token); // For debugging
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Unauthorized: No token provided" });
+  }
+
+  const idToken = authHeader.split(" ")[1];
 
   try {
-    const decoded = await auth.verifyIdToken(token);
-    req.user = decoded;
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    req.user = decodedToken;
     next();
-  } catch (err) {
-    console.error("Token verification error:", err);
-    res.status(400).send("Invalid Token");
+  } catch (error) {
+    console.error("Token verification failed:", error);
+    res.status(401).json({ message: "Unauthorized: Invalid token" });
   }
 };
-
-module.exports = { verifyToken };

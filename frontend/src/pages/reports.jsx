@@ -6,8 +6,8 @@ import {
   where,
   onSnapshot,
 } from "firebase/firestore";
-import { app } from "../firebase"; // Ensure you import your Firebase config
-import { X } from "lucide-react";
+import { app } from "../firebase";
+import { X, Search } from "lucide-react";
 import Sidebar from "../component/Sidebar";
 
 // Initialize Firestore
@@ -17,8 +17,8 @@ function UserReport() {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [alarmData, setAlarmData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch users data
   const fetchAuthUsers = async () => {
     try {
       const response = await fetch(
@@ -40,7 +40,13 @@ function UserReport() {
     fetchAuthUsers();
   }, []);
 
-  // Fetch alarm data based on selected user
+  const filteredUsers = users.filter((user) => {
+    const name = user.displayName?.toLowerCase() || "";
+    const email = user.email?.toLowerCase() || "";
+    const term = searchTerm.toLowerCase();
+    return name.includes(term) || email.includes(term);
+  });
+
   useEffect(() => {
     if (!selectedUser) return;
 
@@ -55,15 +61,14 @@ function UserReport() {
           const alarmsData = snapshot.docs.map((doc) => doc.data());
           setAlarmData(alarmsData);
         } else {
-          setAlarmData([]); // Clear alarm data if no data is found
+          setAlarmData([]);
         }
       });
       return unsubscribe;
     };
 
-    // Fetch alarm history when selectedUser changes
     const unsubscribe = fetchAlarmHistory();
-    return () => unsubscribe(); // Cleanup on unmount or when selectedUser changes
+    return () => unsubscribe();
   }, [selectedUser]);
 
   return (
@@ -74,32 +79,41 @@ function UserReport() {
           <h1 className="text-2xl font-semibold text-gray-800">User Report</h1>
         </div>
 
-        {/* Main content */}
         <div className="p-6 flex-1">
+          {/* Search Input with Icon */}
+          <div className="mb-6 relative w-full max-w-md">
+            <Search className="absolute left-3 top-2.5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
           {/* User Table */}
-          <div className="bg-white p-5 shadow-md rounded-lg mb-6 overflow-x-auto">
-            <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-              <thead className="bg-blue-100 text-gray-700">
+          <div className="bg-white shadow-md rounded-lg overflow-x-auto">
+            <table className="min-w-full text-sm text-gray-700">
+              <thead className="bg-blue-100 text-left text-sm font-semibold text-gray-600">
                 <tr>
-                  <th className="py-3 px-5 border-b text-start">User ID</th>
-                  <th className="py-3 px-5 border-b text-start">Name</th>
-                  <th className="py-3 px-5 border-b text-start">Email</th>
-                  <th className="py-3 px-5 border-b text-center">Action</th>
+                  <th className="py-3 px-5">User ID</th>
+                  <th className="py-3 px-5">Name</th>
+                  <th className="py-3 px-5">Email</th>
+                  <th className="py-3 px-5 text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {Array.isArray(users) && users.length > 0 ? (
-                  users.map((u) => (
+                {filteredUsers.length > 0 ? (
+                  filteredUsers.map((u) => (
                     <tr key={u.uid} className="hover:bg-gray-50 transition">
-                      <td className="py-2 px-5 border-b">{u.uid}</td>
-                      <td className="py-2 px-5 border-b">
-                        {u.displayName || "-"}
-                      </td>
-                      <td className="py-2 px-5 border-b">{u.email}</td>
-                      <td className="py-2 px-5 border-b text-center">
+                      <td className="py-2 px-5">{u.uid}</td>
+                      <td className="py-2 px-5">{u.displayName || "-"}</td>
+                      <td className="py-2 px-5">{u.email}</td>
+                      <td className="py-2 px-5 text-center space-x-2">
                         <button
                           onClick={() => setSelectedUser(u)}
-                          className="bg-blue-600 text-white py-1 px-4 rounded hover:bg-blue-700 transition"
+                          className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition"
                         >
                           View Alarm History
                         </button>
@@ -108,8 +122,11 @@ function UserReport() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="text-center py-4 text-gray-500">
-                      No users found or failed to fetch.
+                    <td
+                      colSpan="4"
+                      className="px-6 py-4 text-center text-gray-500"
+                    >
+                      No users found.
                     </td>
                   </tr>
                 )}
@@ -131,11 +148,10 @@ function UserReport() {
               <h2 className="text-xl font-semibold mb-4 text-gray-800">
                 Alarm History for {selectedUser.email}
               </h2>
-              {/* Scrollable Table */}
               <div className="h-[70vh] overflow-y-auto">
-                <table className="min-w-full table-auto border-collapse border border-gray-300">
-                  <thead>
-                    <tr className="bg-gray-100 text-gray-600">
+                <table className="min-w-full text-sm text-left border-collapse border border-gray-300">
+                  <thead className="bg-gray-100 text-gray-600">
+                    <tr>
                       <th className="py-3 px-4 border-b text-left">#</th>
                       <th className="py-3 px-4 border-b text-center">Time</th>
                     </tr>

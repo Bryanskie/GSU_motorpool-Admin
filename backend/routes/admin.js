@@ -32,6 +32,25 @@ router.get("/auth-users", async (req, res) => {
   }
 });
 
+const addUserByAdmin = async (email, password, displayName) => {
+  return await admin.auth().createUser({
+    email,
+    password,
+    displayName,
+  });
+};
+
+router.post("/add-admin", async (req, res) => {
+  const { email, password, displayName } = req.body;
+
+  try {
+    const user = await addUserByAdmin(email, password, displayName);
+    res.status(200).json({ message: "User added successfully", uid: user.uid });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Promote to Admin
 router.post("/promote", verifyToken, async (req, res) => {
   const { uid } = req.body;
