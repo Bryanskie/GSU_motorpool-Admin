@@ -3,39 +3,38 @@ import { useState } from "react";
 import { auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import React from "react";
+import Loading from "../component/Loading";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      // Sign in the user
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
         password
       );
 
-      // Get Firebase ID Token
       const token = await userCredential.user.getIdToken();
-
-      // Store token in localStorage (to be used in authenticated requests later)
       localStorage.setItem("token", token);
-
-      // Redirect to dashboard
       navigate("/dashboard");
     } catch (err) {
       alert(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (loading) return <Loading />;
+
   return (
     <main className="relative flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white overflow-hidden px-4">
-      <div className="absolute inset-0 flex justify-end items-center pr-10 pointer-events-none"></div>
-
       <form
         onSubmit={handleLogin}
         className="relative z-10 w-full max-w-md bg-gray-900 bg-opacity-80 backdrop-blur-md text-white p-8 rounded-2xl shadow-2xl border border-gray-700"

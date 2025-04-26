@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   getFirestore,
   collection,
@@ -7,17 +7,27 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { app } from "../firebase";
-import { X, Search } from "lucide-react";
+import { X, Search, Bell, CheckCircle, Printer } from "lucide-react";
 import Sidebar from "../component/Sidebar";
+import { useNavigate } from "react-router-dom";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
-// Initialize Firestore
 const db = getFirestore(app);
 
 function UserReport() {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [alarmData, setAlarmData] = useState([]);
+  const [filteredAlarmData, setFilteredAlarmData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [notificationList, setNotificationList] = useState([]);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const audioRef = useRef(null);
+  const navigate = useNavigate();
 
   const fetchAuthUsers = async () => {
     try {
@@ -25,12 +35,8 @@ function UserReport() {
         "http://localhost:5000/api/admin/auth-users"
       );
       const data = await response.json();
-
-      if (Array.isArray(data)) {
-        setUsers(data);
-      } else {
-        console.error("Expected array, got:", data);
-      }
+      if (Array.isArray(data)) setUsers(data);
+      else console.error("Expected array, got:", data);
     } catch (err) {
       console.error("Failed to fetch users:", err);
     }
@@ -38,6 +44,10 @@ function UserReport() {
 
   useEffect(() => {
     fetchAuthUsers();
+    audioRef.current = new Audio("/Notification.mp3");
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
   }, []);
 
   const filteredUsers = users.filter((user) => {
@@ -48,39 +58,204 @@ function UserReport() {
   });
 
   useEffect(() => {
-    if (!selectedUser) return;
+    const alarmRef = collection(db, "alarmSounds");
+    const unsubscribe = onSnapshot(alarmRef, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        const docData = change.doc.data();
+        const userEmail = docData.email;
+        const history = docData.alarmHistory || [];
 
-    const fetchAlarmHistory = () => {
-      const alarmRef = collection(db, "alarmSounds");
-      const userAlarmQuery = query(
-        alarmRef,
-        where("email", "==", selectedUser.email)
-      );
-      const unsubscribe = onSnapshot(userAlarmQuery, (snapshot) => {
-        if (!snapshot.empty) {
-          const alarmsData = snapshot.docs.map((doc) => doc.data());
-          setAlarmData(alarmsData);
-        } else {
-          setAlarmData([]);
+        if (
+          (change.type === "added" || change.type === "modified") &&
+          history.length > 0
+        ) {
+          const lastAlarmTime = new Date(history[history.length - 1].time);
+          const now = new Date();
+
+          if (now - lastAlarmTime < 5000) {
+            const message = `Alarm triggered for ${userEmail} at ${lastAlarmTime.toLocaleString()}`;
+            audioRef.current?.play();
+            setNotificationList((prev) => [
+              ...prev,
+              { message, timestamp: new Date(), userEmail },
+            ]);
+
+            if (Notification.permission === "granted") {
+              new Notification("Alarm Alert", {
+                body: message,
+                icon: "/favicon.ico",
+              });
+            }
+          }
         }
       });
-      return unsubscribe;
-    };
+    });
+    return () => unsubscribe();
+  }, []);
 
-    const unsubscribe = fetchAlarmHistory();
+  useEffect(() => {
+    if (!selectedUser) return;
+
+    const alarmRef = collection(db, "alarmSounds");
+    const userAlarmQuery = query(
+      alarmRef,
+      where("email", "==", selectedUser.email)
+    );
+    const unsubscribe = onSnapshot(userAlarmQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        const newAlarmsData = snapshot.docs.map((doc) => doc.data());
+        const userHistory = newAlarmsData
+          .map((alarm) => alarm.alarmHistory)
+          .flat();
+        setAlarmData(userHistory);
+        setFilteredAlarmData(userHistory);
+      } else {
+        setAlarmData([]);
+        setFilteredAlarmData([]);
+      }
+    });
     return () => unsubscribe();
   }, [selectedUser]);
+
+  useEffect(() => {
+    if (!startDate && !endDate) {
+      setFilteredAlarmData(alarmData);
+      return;
+    }
+
+    const filtered = alarmData.filter((alarm) => {
+      const alarmDate = new Date(alarm.time);
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+
+      if (start && end) {
+        return alarmDate >= start && alarmDate <= end;
+      } else if (start) {
+        return alarmDate >= start;
+      } else if (end) {
+        return alarmDate <= end;
+      }
+      return true;
+    });
+
+    setFilteredAlarmData(filtered);
+  }, [alarmData, startDate, endDate]);
+
+  const toggleModal = () => {
+    setIsModalOpen(!isModalOpen);
+    if (!isModalOpen) {
+      setStartDate("");
+      setEndDate("");
+    }
+  };
+
+  const generatePDF = () => {
+    if (!selectedUser || filteredAlarmData.length === 0) return;
+
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFontSize(18);
+    doc.text(`Alarm History Report for ${selectedUser.displayName}`, 15, 15);
+
+    // Date range info
+    doc.setFontSize(12);
+    let dateRangeText = "All time";
+    if (startDate || endDate) {
+      dateRangeText = `From: ${startDate || "Beginning"} To: ${
+        endDate || "Now"
+      }`;
+    }
+    doc.text(`Date Range: ${dateRangeText}`, 15, 25);
+
+    // Table data
+    const tableData = filteredAlarmData.map((alarm, index) => [
+      index + 1,
+      new Date(alarm.time).toLocaleString(),
+    ]);
+
+    // Generate table
+    autoTable(doc, {
+      startY: 30,
+      head: [["No.", "Time"]],
+      body: tableData,
+      theme: "grid",
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245],
+      },
+      margin: { top: 30 },
+    });
+
+    // Footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.text(
+        `Page ${i} of ${pageCount}`,
+        doc.internal.pageSize.width - 30,
+        doc.internal.pageSize.height - 10
+      );
+    }
+
+    doc.save(
+      `Alarm_History_${selectedUser.displayName}_${new Date()
+        .toISOString()
+        .slice(0, 10)}.pdf`
+    );
+  };
 
   return (
     <div className="flex h-screen bg-gradient-to-r from-gray-50 to-gray-100">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-y-auto">
-        <div className="bg-white p-4 shadow-md">
+        <div className="bg-white p-4 shadow-md flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-gray-800">User Report</h1>
+          <button
+            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+            className="relative flex items-center gap-2 bg-opacity-90 bg-gray-900 shadow-lg hover:bg-gray-500 text-white px-4 py-2 rounded-lg transition duration-300 ease-in-out"
+          >
+            <Bell className="w-5 h-5" /> Notifications (
+            {notificationList.length})
+          </button>
         </div>
 
+        {isNotificationsOpen && (
+          <div className="absolute top-16 right-4 bg-white shadow-lg rounded-lg p-4 w-80 max-h-96 overflow-y-auto z-50 border border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">
+              Notifications
+            </h3>
+            <div className="space-y-3">
+              {notificationList.length > 0 ? (
+                notificationList.map((notification, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between bg-gray-100 hover:bg-gray-200 rounded-lg p-3 transition duration-300 ease-in-out"
+                  >
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      <span className="text-sm text-gray-700">
+                        {notification.message}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {new Date(notification.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500">No new notifications</p>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="p-6 flex-1">
-          {/* Search Input with Icon */}
           <div className="mb-6 relative w-full max-w-md">
             <Search className="absolute left-3 top-2.5 text-gray-400" />
             <input
@@ -92,10 +267,9 @@ function UserReport() {
             />
           </div>
 
-          {/* User Table */}
           <div className="bg-white shadow-md rounded-lg overflow-x-auto">
             <table className="min-w-full text-sm text-gray-700">
-              <thead className="bg-blue-100 text-left text-sm font-semibold text-gray-600">
+              <thead className="bg-blue-100 text-left font-semibold text-gray-600">
                 <tr>
                   <th className="py-3 px-5">User ID</th>
                   <th className="py-3 px-5">Name</th>
@@ -112,7 +286,10 @@ function UserReport() {
                       <td className="py-2 px-5">{u.email}</td>
                       <td className="py-2 px-5 text-center space-x-2">
                         <button
-                          onClick={() => setSelectedUser(u)}
+                          onClick={() => {
+                            setSelectedUser(u);
+                            toggleModal();
+                          }}
                           className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition"
                         >
                           View Alarm History
@@ -135,68 +312,85 @@ function UserReport() {
           </div>
         </div>
 
-        {/* Modal for Alarm History */}
-        {selectedUser && (
-          <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center z-50 pointer-events-none">
-            <div className="bg-white rounded-lg p-6 max-w-2xl w-full shadow-2xl border border-gray-300 relative pointer-events-auto max-h-[80vh] overflow-hidden">
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="absolute top-3 right-3 text-gray-500 hover:text-red-500 transition"
-              >
-                <X />
+        {isModalOpen && selectedUser && (
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white shadow-lg z-50 w-full max-w-4xl rounded-xl border border-gray-300">
+            <div className="flex justify-between items-center bg-gradient-to-r from-gray-100 to-gray-200 p-4 border-b">
+              <h3 className="text-lg font-semibold">
+                Alarm History for {selectedUser.displayName}
+              </h3>
+              <button onClick={toggleModal}>
+                <X className="w-5 h-5 text-gray-600 hover:text-red-500" />
               </button>
-              <h2 className="text-xl font-semibold mb-4 text-gray-800">
-                Alarm History for {selectedUser.email}
-              </h2>
-              <div className="h-[70vh] overflow-y-auto">
-                <table className="min-w-full text-sm text-left border-collapse border border-gray-300">
-                  <thead className="bg-gray-100 text-gray-600">
+            </div>
+            <div className="p-4 border-b bg-gray-50">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    From:
+                  </label>
+                  <input
+                    type="date"
+                    className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    To:
+                  </label>
+                  <input
+                    type="date"
+                    className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    setStartDate("");
+                    setEndDate("");
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Clear Filters
+                </button>
+                <button
+                  onClick={generatePDF}
+                  className="ml-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+                >
+                  <Printer className="w-4 h-4" />
+                  Export as PDF
+                </button>
+              </div>
+            </div>
+            <div className="max-h-96 overflow-y-auto p-4">
+              {filteredAlarmData.length > 0 ? (
+                <table className="w-full text-sm text-left border-collapse">
+                  <thead className="bg-blue-200 text-gray-700 font-medium">
                     <tr>
-                      <th className="py-3 px-4 border-b text-left">#</th>
-                      <th className="py-3 px-4 border-b text-center">Time</th>
+                      <th className="px-4 py-2 border-b">Count</th>
+                      <th className="px-4 py-2 border-b">Time</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {alarmData.length > 0 ? (
-                      alarmData.map((alarm, alarmIndex) =>
-                        alarm.alarmHistory.length > 0 ? (
-                          alarm.alarmHistory.map((history, index) => (
-                            <tr
-                              key={`${alarmIndex}-${index}`}
-                              className="hover:bg-gray-50 transition"
-                            >
-                              <td className="py-3 px-4 border-b text-center text-sm font-medium">
-                                {alarmIndex * 10 + index + 1}
-                              </td>
-                              <td className="py-3 px-4 border-b text-center text-sm font-medium">
-                                {new Date(history.time).toLocaleString()}
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr key={alarmIndex}>
-                            <td
-                              colSpan="2"
-                              className="text-center py-3 px-4 text-gray-500"
-                            >
-                              No Alarm History
-                            </td>
-                          </tr>
-                        )
-                      )
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan="2"
-                          className="text-center py-3 px-4 text-gray-500"
-                        >
-                          No Data Available
+                    {filteredAlarmData.map((alarm, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-4 py-2 border-b">{index + 1}</td>
+                        <td className="px-4 py-2 border-b">
+                          {new Date(alarm.time).toLocaleString()}
                         </td>
                       </tr>
-                    )}
+                    ))}
                   </tbody>
                 </table>
-              </div>
+              ) : (
+                <p className="text-gray-500">
+                  {alarmData.length === 0
+                    ? "No alarm history available."
+                    : "No alarms found for the selected date range."}
+                </p>
+              )}
             </div>
           </div>
         )}
