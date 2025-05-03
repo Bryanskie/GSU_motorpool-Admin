@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import UserReport from "./pages/reports";
 import AddAdmin from "./pages/AddAdmin";
+import ForgotPassword from "./pages/ForgotPassword";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           {/* Protected Routes */}
           <Route

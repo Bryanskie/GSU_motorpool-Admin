@@ -12,7 +12,7 @@ const Dashboard = () => {
   const [totalAlarmHistory, setTotalAlarmHistory] = useState(0);
   const [notificationList, setNotificationList] = useState([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const audioRef = useRef(null); 
+  const audioRef = useRef(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -87,7 +87,9 @@ const Dashboard = () => {
       <div className="flex-1 flex flex-col overflow-y-auto">
         {/* Header */}
         <div className="bg-white px-6 py-4 shadow flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-800">Welcome, Admin</h1>
+          <h1 className="text-2xl font-semibold text-gray-800">
+            Welcome, Admin
+          </h1>
 
           {/* Notification Button */}
           <button

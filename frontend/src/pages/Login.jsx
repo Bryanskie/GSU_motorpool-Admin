@@ -4,6 +4,8 @@ import { auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import React from "react";
 import Loading from "../component/Loading";
+import Swal from "sweetalert2";
+import { Link } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -25,7 +27,7 @@ const Login = () => {
       localStorage.setItem("token", token);
       navigate("/dashboard");
     } catch (err) {
-      alert(err.message);
+      Swal.fire("Login Failed", err.message, "error");
     } finally {
       setLoading(false);
     }
@@ -61,7 +63,7 @@ const Login = () => {
           />
         </div>
 
-        <div className="mb-6">
+        <div className="mb-2">
           <label
             htmlFor="password"
             className="block text-sm font-medium text-gray-300 mb-1"
@@ -77,6 +79,15 @@ const Login = () => {
             className="w-full px-4 py-2 border border-gray-600 bg-gray-800 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
+        </div>
+
+        <div className="mb-6 text-right">
+          <Link
+            to="/forgot-password"
+            className="text-sm text-blue-400 hover:underline focus:outline-none"
+          >
+            Forgot Password?
+          </Link>
         </div>
 
         <button

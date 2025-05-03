@@ -98,7 +98,9 @@ const AddAdmin = () => {
 
       <div className="flex-1 flex flex-col overflow-y-auto">
         <div className="bg-white px-6 py-4 shadow flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-800">Add New Admin</h1>
+          <h1 className="text-2xl font-semibold text-gray-800">
+            Add New Admin
+          </h1>
 
           <button
             onClick={toggleNotifications}
