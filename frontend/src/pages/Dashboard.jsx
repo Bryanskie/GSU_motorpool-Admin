@@ -20,7 +20,6 @@ const Dashboard = () => {
     headCells: {
       style: {
         backgroundColor: "#111827",
-        opacity: 1,
         color: "#ffffff",
         fontSize: "15px",
       },
