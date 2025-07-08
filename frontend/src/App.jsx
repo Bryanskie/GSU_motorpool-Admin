@@ -9,6 +9,7 @@ import Users from "./pages/Users";
 import UserReport from "./pages/reports";
 import AddAdmin from "./pages/AddAdmin";
 import ForgotPassword from "./pages/ForgotPassword";
+import ArchivedUsers from "./pages/ArchivedUsers";
 
 function App() {
   return (
@@ -43,6 +44,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <UserReport />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/archived-users"
+            element={
+              <ProtectedRoute>
+                <ArchivedUsers />
               </ProtectedRoute>
             }
           />

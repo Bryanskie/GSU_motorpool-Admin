@@ -12,8 +12,44 @@ import Sidebar from "../component/Sidebar";
 import { useNavigate } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import DataTable from "react-data-table-component";
 
 const db = getFirestore(app);
+
+const columns = [
+  {
+    name: "Name",
+    selector: (row) => row.displayName || "-",
+    sortable: true,
+  },
+  {
+    name: "Email",
+    selector: (row) => row.email,
+    sortable: true,
+  },
+  {
+    name: "Role",
+    selector: (row) => row.role,
+    sortable: true,
+  },
+  {
+    name: "Action",
+    cell: (row) => (
+      <button
+        onClick={() => {
+          setSelectedUser(row);
+          toggleModal();
+        }}
+        className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition"
+      >
+        Alarm History
+      </button>
+    ),
+    ignoreRowClick: true,
+    allowOverflow: true,
+    button: true,
+  },
+];
 
 function UserReport() {
   const [users, setUsers] = useState([]);
@@ -35,8 +71,20 @@ function UserReport() {
         "http://localhost:5000/api/admin/auth-users"
       );
       const data = await response.json();
-      if (Array.isArray(data)) setUsers(data);
-      else console.error("Expected array, got:", data);
+
+      if (Array.isArray(data)) {
+        const nonAdminUsers = data.filter((user) => {
+          return (
+            user.role !== "admin" &&
+            user.customClaims?.role !== "admin" &&
+            !user.isAdmin
+          );
+        });
+
+        setUsers(nonAdminUsers);
+      } else {
+        console.error("Expected array, got:", data);
+      }
     } catch (err) {
       console.error("Failed to fetch users:", err);
     }
@@ -210,6 +258,41 @@ function UserReport() {
     );
   };
 
+  const columns = [
+    {
+      name: "Name",
+      selector: (row) => row.displayName || "-",
+      sortable: true,
+    },
+    {
+      name: "Email",
+      selector: (row) => row.email,
+      sortable: true,
+    },
+    {
+      name: "Role",
+      selector: (row) => row.role,
+      sortable: true,
+    },
+    {
+      name: "Action",
+      cell: (row) => (
+        <button
+          onClick={() => {
+            setSelectedUser(row);
+            toggleModal();
+          }}
+          className="bg-blue-600 text-white px-2 py-1 rounded-md hover:bg-blue-700 transition"
+        >
+          Alarm History
+        </button>
+      ),
+      ignoreRowClick: true,
+      allowOverflow: true,
+      button: true,
+    },
+  ];
+
   return (
     <div className="flex h-screen bg-gradient-to-r from-gray-50 to-gray-100">
       <Sidebar />
@@ -255,61 +338,28 @@ function UserReport() {
           </div>
         )}
 
-        <div className="p-6 flex-1">
-          <div className="mb-6 relative w-full max-w-md">
-            <Search className="absolute left-3 top-2.5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name or email..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <div className="bg-white shadow-md rounded-lg overflow-x-auto">
-            <table className="min-w-full text-sm text-gray-700">
-              <thead className="bg-blue-100 text-left font-semibold text-gray-600">
-                <tr>
-                  <th className="py-3 px-5">User ID</th>
-                  <th className="py-3 px-5">Name</th>
-                  <th className="py-3 px-5">Email</th>
-                  <th className="py-3 px-5 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.length > 0 ? (
-                  filteredUsers.map((u) => (
-                    <tr key={u.uid} className="hover:bg-gray-50 transition">
-                      <td className="py-2 px-5">{u.uid}</td>
-                      <td className="py-2 px-5">{u.displayName || "-"}</td>
-                      <td className="py-2 px-5">{u.email}</td>
-                      <td className="py-2 px-5 text-center space-x-2">
-                        <button
-                          onClick={() => {
-                            setSelectedUser(u);
-                            toggleModal();
-                          }}
-                          className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition"
-                        >
-                          View Alarm History
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan="4"
-                      className="px-6 py-4 text-center text-gray-500"
-                    >
-                      No users found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+        <div className="p-6">
+          <DataTable
+            columns={columns}
+            data={filteredUsers}
+            pagination
+            highlightOnHover
+            pointerOnHover
+            responsive
+            subHeader
+            subHeaderComponent={
+              <div className="relative w-full max-w-md">
+                <Search className="absolute left-3 top-2.5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  className="w-full pl-10 pr-4 py-2 border rounded shadow-sm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            }
+          />
         </div>
 
         {isModalOpen && selectedUser && (

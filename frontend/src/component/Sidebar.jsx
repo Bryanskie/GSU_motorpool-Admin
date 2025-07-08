@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, FileText, LogOut } from "lucide-react";
+import { Home, Users, FileText, LogOut, Archive } from "lucide-react";
 import axios from "axios";
 import Swal from "sweetalert2";
 
@@ -72,6 +72,20 @@ const Sidebar = () => {
             <FileText size={20} /> Reports
           </Link>
         </li>
+
+        <li>
+          <Link
+            to="/archived-users"
+            className={`flex items-center gap-2 p-2 rounded-lg transition-colors duration-200 ${
+              isActive("/addAdmin")
+                ? "bg-gray-800 text-blue-400"
+                : "text-white hover:bg-gray-800 hover:text-blue-400"
+            }`}
+          >
+            <Archive size={20} /> Archived Users
+          </Link>
+        </li>
+
         <li>
           <Link
             to="/add-admin"
