@@ -65,6 +65,17 @@ function UserReport() {
   const audioRef = useRef(null);
   const navigate = useNavigate();
 
+  const customStyles = {
+    headCells: {
+      style: {
+        backgroundColor: "#111827",
+        opacity: 1,
+        color: "#ffffff",
+        fontSize: "15px",
+      },
+    },
+  };
+
   const fetchAuthUsers = async () => {
     try {
       const response = await fetch(
@@ -338,7 +349,7 @@ function UserReport() {
           </div>
         )}
 
-        <div className="p-6">
+        <div className="p-6 rounded-xl">
           <DataTable
             columns={columns}
             data={filteredUsers}
@@ -347,6 +358,7 @@ function UserReport() {
             pointerOnHover
             responsive
             subHeader
+            customStyles={customStyles}
             subHeaderComponent={
               <div className="relative w-full max-w-md">
                 <Search className="absolute left-3 top-2.5 text-gray-400" />
@@ -363,13 +375,13 @@ function UserReport() {
         </div>
 
         {isModalOpen && selectedUser && (
-          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white shadow-lg z-50 w-full max-w-4xl rounded-xl border border-gray-300">
-            <div className="flex justify-between items-center bg-gradient-to-r from-gray-100 to-gray-200 p-4 border-b">
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white shadow-lg z-50 w-full max-w-3xl p-2 rounded-md border border-gray-600">
+            <div className="flex justify-between items-center bg-opacity-90 bg-gray-900 shadow-lg text-white p-4 border-b">
               <h3 className="text-lg font-semibold">
                 Alarm History for {selectedUser.displayName}
               </h3>
               <button onClick={toggleModal}>
-                <X className="w-5 h-5 text-gray-600 hover:text-red-500" />
+                <X className="w-5 h-5 text-white hover:text-red-500" />
               </button>
             </div>
             <div className="p-4 border-b bg-gray-50">
@@ -414,33 +426,34 @@ function UserReport() {
                 </button>
               </div>
             </div>
-            <div className="max-h-96 overflow-y-auto p-4">
-              {filteredAlarmData.length > 0 ? (
-                <table className="w-full text-sm text-left border-collapse">
-                  <thead className="bg-blue-200 text-gray-700 font-medium">
-                    <tr>
-                      <th className="px-4 py-2 border-b">Count</th>
-                      <th className="px-4 py-2 border-b">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAlarmData.map((alarm, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 border-b">{index + 1}</td>
-                        <td className="px-4 py-2 border-b">
-                          {new Date(alarm.time).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p className="text-gray-500">
-                  {alarmData.length === 0
+            <div className="max-h-96 overflow-y-auto p-4 rounded-xl ">
+              <DataTable
+                title={`Alarm History (${filteredAlarmData.length})`}
+                columns={[
+                  {
+                    name: "Count",
+                    selector: (row, index) => index + 1,
+                    sortable: true,
+                    width: "100px",
+                  },
+                  {
+                    name: "Time",
+                    selector: (row) => new Date(row.time).toLocaleString(),
+                    sortable: true,
+                  },
+                ]}
+                data={filteredAlarmData}
+                pagination
+                highlightOnHover
+                pointerOnHover
+                responsive
+                dense
+                noDataComponent={
+                  alarmData.length === 0
                     ? "No alarm history available."
-                    : "No alarms found for the selected date range."}
-                </p>
-              )}
+                    : "No alarms found for the selected date range."
+                }
+              />
             </div>
           </div>
         )}

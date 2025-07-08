@@ -70,6 +70,17 @@ function Users() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const audioRef = useRef(null);
 
+  const customStyles = {
+    headCells: {
+      style: {
+        backgroundColor: "#111827",
+        opacity: 1,
+        color: "#ffffff",
+        fontSize: "15px",
+      },
+    },
+  };
+
   const fetchAuthUsers = async () => {
     try {
       const response = await fetch(
@@ -255,7 +266,7 @@ function Users() {
         )}
 
         {/* Data Table */}
-        <div className="p-6">
+        <div className="p-6 rounded-xl">
           <DataTable
             columns={columns(handleUpdate, handleDisable)}
             data={filteredUsers}
@@ -265,6 +276,7 @@ function Users() {
             responsive
             striped
             subHeader
+            customStyles={customStyles}
             subHeaderComponent={
               <div className="relative w-full max-w-md">
                 <Search className="absolute left-3 top-2.5 text-gray-400" />

@@ -10,6 +10,17 @@ const ArchivedUsers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
+  const customStyles = {
+    headCells: {
+      style: {
+        backgroundColor: "#111827",
+        opacity: 1,
+        color: "#ffffff",
+        fontSize: "15px",
+      },
+    },
+  };
+
   const handleEnable = async (email) => {
     const result = await Swal.fire({
       title: "Are you sure?",
@@ -107,7 +118,7 @@ const ArchivedUsers = () => {
             Archived Users
           </h1>
         </div>
-        <div className="p-6">
+        <div className="p-6 rounded-xl">
           <DataTable
             columns={columns}
             data={filteredUsers}
@@ -117,6 +128,7 @@ const ArchivedUsers = () => {
             pointerOnHover
             responsive
             subHeader
+            customStyles={customStyles}
             subHeaderComponent={
               <div className="relative w-full max-w-md">
                 <Search
