@@ -77,7 +77,7 @@ const Sidebar = () => {
           <Link
             to="/archived-users"
             className={`flex items-center gap-2 p-2 rounded-lg transition-colors duration-200 ${
-              isActive("/addAdmin")
+              isActive("/archived-users")
                 ? "bg-white text-black"
                 : "text-white hover:bg-white hover:text-black"
             }`}
@@ -90,7 +90,7 @@ const Sidebar = () => {
           <Link
             to="/add-admin"
             className={`flex items-center gap-2 p-2 rounded-lg transition-colors duration-200 ${
-              isActive("/addAdmin")
+              isActive("/add-admin")
                 ? "bg-white text-black"
                 : "text-white hover:bg-white hover:text-black"
             }`}
